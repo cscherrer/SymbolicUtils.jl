@@ -58,3 +58,30 @@ function substitute(expr, dict; fold=true)
         expr
     end
 end
+
+# If there's only one key, a Pair has much less overhead than a Dict
+function substitute(expr, Δ::Pair; fold=true)
+    (old, new) = Δ
+
+    if old === expr 
+        return new
+    end
+
+    if istree(expr)
+        if fold
+            canfold=true
+            args = map(arguments(expr)) do x
+                x′ = substitute(x, Δ; fold=fold)
+                canfold = canfold && !(x′ isa Symbolic)
+                x′
+            end
+            canfold && return operation(expr)(args...)
+            args
+        else
+            args = map(x->substitute(x, Δ), arguments(expr))
+        end
+        similarterm(expr, operation(expr), args)
+    else
+        expr
+    end
+end
